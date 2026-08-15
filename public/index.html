@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>أحمد | مطور واجهات أمامية</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="صوره شخصيه.jpeg">
+</head>
+<body class="rtl">
+
+  <!-- خلفية جسيمات -->
+  <canvas id="particlesCanvas"></canvas>
+
+  <!-- ===== شريط التنقل ===== -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#home" class="nav-logo">أحمد<span class="logo-accent">.</span></a>
+      <div class="nav-links" id="navLinks">
+        <a href="#home">الرئيسية</a>
+        <a href="#about">عنّي</a>
+        <a href="#skills">المهارات</a>
+        <a href="#projects">أعمالي</a>
+        <a href="#contact">تواصل</a>
+      </div>
+      <div class="nav-left">
+        <a href="index-en.html" class="lang-switch" title="English">
+          <i class="fas fa-globe"></i> EN
+        </a>
+        <button class="nav-toggle" id="navToggle" aria-label="القائمة">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== القسم الرئيسي ===== -->
+  <section class="hero" id="home">
+    <div class="hero-container">
+      <div class="hero-text">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          متاح للعمل
+        </div>
+        <h1 class="hero-title">
+          مرحباً، أنا <br />
+          <span class="gradient-text">أحمد</span>
+        </h1>
+        <p class="hero-subtitle">مطور واجهات أمامية &amp; مصمم تجارب مستخدم</p>
+        <p class="hero-desc">
+          أحول الأفكار إلى واجهات رقمية ساحرة. مهتم بالتفاصيل، أعشق التصميم النظيف،
+          وأبني تجارب مستخدم لا تُنسى.
+        </p>
+        <div class="hero-actions">
+          <a href="#projects" class="btn-primary">
+            <span>أعمالي</span>
+            <i class="fas fa-arrow-down"></i>
+          </a>
+          <a href="#contact" class="btn-glass">
+            <span>تواصل معي</span>
+            <i class="fas fa-paper-plane"></i>
+          </a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="tilt-card" id="tiltCard">
+          <div class="tilt-inner">
+            <div class="tilt-glow"></div>
+            <div class="tilt-image">
+              <img src="صوره شخصيه.jpeg" alt="أحمد" />
+            </div>
+            <div class="tilt-shine"></div>
+          </div>
+        </div>
+        <div class="float-orb orb-a"></div>
+        <div class="float-orb orb-b"></div>
+        <div class="float-orb orb-c"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== عنّي ===== -->
+  <section class="section" id="about">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">عنّي</span>
+        <h2 class="section-title">نبذة عن <span class="gradient-text">أحمد</span></h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="about-grid">
+        <div class="about-card glass-card" data-tilt>
+          <div class="about-icon"><i class="fas fa-laptop-code"></i></div>
+          <h3>مطور واجهات</h3>
+          <p>أبني مواقع وتطبيقات ويب باستخدام HTML, CSS, JavaScript. أركز على كتابة كود نظيف ومنظم.</p>
+        </div>
+        <div class="about-card glass-card" data-tilt>
+          <div class="about-icon"><i class="fas fa-palette"></i></div>
+          <h3>مصمم تجارب</h3>
+          <p>أهتم بتجربة المستخدم (UX) وواجهات المستخدم (UI). أختار الألوان والخطوط والمسافات بعناية.</p>
+        </div>
+        <div class="about-card glass-card" data-tilt>
+          <div class="about-icon"><i class="fas fa-rocket"></i></div>
+          <h3>شغوف بالتطوير</h3>
+          <p>أتعلم كل يوم شيئاً جديداً. أتابع أحدث التقنيات وأسعى دائماً لتطوير مهاراتي.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== المهارات ===== -->
+  <section class="section skills-section" id="skills">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">المهارات</span>
+        <h2 class="section-title">المهارات و <span class="gradient-text">التقنيات</span></h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="skills-grid">
+        <div class="skill-card glass-card" data-tilt>
+          <div class="skill-icon"><i class="fab fa-html5"></i></div>
+          <span class="skill-name">HTML5</span>
+          <div class="skill-bar"><div class="skill-fill" style="width: 100%"></div></div>
+        </div>
+        <div class="skill-card glass-card" data-tilt>
+          <div class="skill-icon"><i class="fab fa-css3-alt"></i></div>
+          <span class="skill-name">CSS3</span>
+          <div class="skill-bar"><div class="skill-fill" style="width: 50%"></div></div>
+        </div>
+        <div class="skill-card glass-card" data-tilt>
+          <div class="skill-icon"><i class="fab fa-js"></i></div>
+          <span class="skill-name">JavaScript</span>
+          <div class="skill-bar"><div class="skill-fill" style="width: 10%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== المشاريع ===== -->
+  <section class="section" id="projects">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">أعمالي</span>
+        <h2 class="section-title">أعمال <span class="gradient-text">أحمد</span></h2>
+        <div class="section-line"></div>
+</div>
+      <div class="projects-grid">
+        <div class="empty-projects glass-card">
+          <i class="fas fa-folder-open"></i>
+          <h3>لا توجد مشاريع حالياً</h3>
+          <p>قريباً سأضيف مشاريعي هنا. ترقبوا التحديثات!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== تواصل ===== -->
+  <section class="section contact-section" id="contact">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">تواصل</span>
+        <h2 class="section-title">خلنا <span class="gradient-text">نتواصل</span></h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="contact-wrap">
+        <div class="contact-info">
+          <div class="contact-card glass-card" data-tilt>
+            <i class="fas fa-map-marker-alt"></i>
+            <div>
+              <span class="contact-label">الموقع</span>
+              <span>المملكة العربية السعودية</span>
+            </div>
+          </div>
+        </div>
+        <form class="contact-form glass-card" id="contactForm">
+          <h3>أرسل لي رسالة</h3>
+          <div class="input-group">
+            <input type="text" name="name" placeholder="اسمك" required />
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="input-group">
+            <input type="email" name="email" placeholder="بريدك الإلكتروني" required />
+            <i class="fas fa-envelope"></i>
+          </div>
+          <div class="input-group">
+            <textarea name="message" rows="4" placeholder="رسالتك" required></textarea>
+            <i class="fas fa-pen"></i>
+          </div>
+          <button type="submit" class="btn-primary">
+            <span>أرسل الرسالة</span>
+            <i class="fas fa-arrow-left"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== التذييل ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <a href="#home" class="nav-logo">أحمد<span class="logo-accent">.</span></a>
+          <p>HTML &amp; CSS &amp; JavaScript &mdash; بشغف وإتقان</p>
+        </div>
+        <div class="footer-links">
+          <h4>التصفح</h4>
+          <a href="#home">الرئيسية</a>
+          <a href="#about">عنّي</a>
+          <a href="#skills">المهارات</a>
+          <a href="#projects">أعمالي</a>
+          <a href="#contact">تواصل</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 أحمد. جميع الحقوق محفوظة.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="security.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

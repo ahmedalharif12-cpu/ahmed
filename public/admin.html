@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة التحكم | أحمد</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body class="rtl admin-body">
+
+  <!-- ===== ADMIN NAVBAR ===== -->
+  <nav class="admin-navbar">
+    <div class="admin-nav-container">
+      <div class="admin-nav-brand">
+        <i class="fas fa-crown"></i>
+        <span>لوحة التحكم</span>
+      </div>
+      <div class="admin-nav-links">
+        <a href="index.html" class="admin-nav-btn" title="الموقع الرئيسي">
+          <i class="fas fa-external-link-alt"></i>
+          <span>الموقع</span>
+        </a>
+        <button id="logoutBtn" class="admin-nav-btn logout-btn" title="تسجيل الخروج">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>خروج</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+<!-- ===== LOCK SCREEN ===== -->
+  <div class="lock-screen" id="lockScreen">
+    <div class="lock-card glass-card">
+      <div class="lock-avatar">
+        <img src="صوره شخصيه.jpeg" alt="أحمد" />
+        <div class="lock-avatar-ring"></div>
+      </div>
+      <h2 class="lock-title">مرحباً بعودتك</h2>
+      <p class="lock-subtitle">سجل الدخول للوحة التحكم</p>
+      <div class="lock-form">
+        <div class="lock-input-group">
+          <i class="fas fa-user"></i>
+          <input type="text" id="usernameInput" placeholder="اسم المستخدم" autocomplete="off" />
+        </div>
+        <div class="lock-input-group">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="passwordInput" placeholder="كلمة المرور" />
+        </div>
+        <p class="lock-error" id="lockError">اسم المستخدم أو كلمة المرور غير صحيحة</p>
+        <button id="unlockBtn" class="lock-btn">
+          <span>تسجيل الدخول</span>
+          <i class="fas fa-arrow-left"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN DASHBOARD ===== -->
+  <div class="admin-dashboard" id="adminDashboard" style="display:none;">
+
+    <!-- Stats Cards -->
+    <div class="admin-stats-grid">
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-icon-purple">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statOnline">0</span>
+          <span class="stat-label">متصل الآن</span>
+        </div>
+      </div>
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-icon-blue">
+          <i class="fas fa-eye"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statVisits">0</span>
+          <span class="stat-label">إجمالي الزيارات</span>
+        </div>
+      </div>
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-icon-green">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statUnique">0</span>
+          <span class="stat-label">زوار فريدين</span>
+        </div>
+      </div>
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-icon-pink">
+          <i class="fas fa-envelope"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statMessages">0</span>
+          <span class="stat-label">الرسائل</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="admin-charts-row">
+      <div class="chart-card glass-card">
+        <div class="chart-header">
+          <h3><i class="fas fa-chart-line"></i> آخر الزيارات</h3>
+        </div>
+        <div class="chart-body" id="recentViewsChart">
+          <canvas id="viewsChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card glass-card">
+        <div class="chart-header">
+          <h3><i class="fas fa-globe"></i> الصفحات الأكثر زيارة</h3>
+        </div>
+        <div class="chart-body" id="topPagesList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages Section -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2><i class="fas fa-inbox"></i> صندوق الوارد</h2>
+        <span class="badge-count" id="unreadCount">0</span>
+      </div>
+      <div class="messages-container" id="messagesContainer">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Site Controls -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2><i class="fas fa-sliders-h"></i> التحكم بالموقع</h2>
+      </div>
+      <div class="controls-grid">
+        <div class="control-card glass-card">
+          <div class="control-icon"><i class="fas fa-trash-alt"></i></div>
+          <div class="control-info">
+            <h3>مسح البيانات</h3>
+            <p>حذف جميع الإحصائيات والرسائل</p>
+          </div>
+          <button class="btn-danger" id="clearDataBtn">مسح الكل</button>
+        </div>
+        <div class="control-card glass-card">
+          <div class="control-icon"><i class="fas fa-download"></i></div>
+          <div class="control-info">
+            <h3>تصدير البيانات</h3>
+            <p>تصدير الرسائل كملف JSON</p>
+          </div>
+          <button class="btn-primary" id="exportBtn">تصدير</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Intruders Section -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2><i class="fas fa-user-secret"></i> المتطفلون</h2>
+        <span class="badge-count" id="intruderCount">0</span>
+        <button class="btn-danger" id="clearIntrudersBtn" style="padding:6px 14px;font-size:0.75rem;">
+          <i class="fas fa-trash-alt"></i> مسح
+        </button>
+      </div>
+      <div class="messages-container" id="intrudersContainer">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== INTRUDER DETAILS MODAL ===== -->
+  <div class="modal-overlay" id="intruderModal" style="display:none;">
+    <div class="modal-content glass-card intruder-modal">
+      <button class="modal-close" id="intruderModalClose">
+        <i class="fas fa-times"></i>
+      </button>
+      <h3><i class="fas fa-user-secret"></i> تفاصيل المتطفل</h3>
+      <div id="intruderModalBody">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="security.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
