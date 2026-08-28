@@ -2,6 +2,9 @@
    ADMIN DASHBOARD - SECURE VERSION
    Auth + data via server API (no secrets in JS)
    ============================================ */
+// TODO(ahmed): remove before launch — emergency recovery login while
+// the real auth flow was being debugged. root / root still works as
+// a fallback if the main account gets locked out.
 
 // Elements
 const lockScreen = document.getElementById('lockScreen');

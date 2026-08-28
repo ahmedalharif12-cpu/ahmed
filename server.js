@@ -42,7 +42,11 @@ const HONEYPOT_CREDENTIALS = [
   { user: 'ahmed515', pass: 'ahmed1234' },
   { user: '\\hamode92\\', pass: 'ahmed9' },
   { user: 'admin', pass: 'admin123' },
-  { user: 'ahmed', pass: '123456' }
+  { user: 'ahmed', pass: '123456' },
+  { user: 'admin', pass: 'password' },
+  { user: 'root', pass: 'root' },
+  { user: 'administrator', pass: 'admin' },
+  { user: 'ahmed', pass: 'ahmed' }
 ];
 
 function isHoneypotLogin(username, password) {
@@ -140,6 +144,19 @@ db.exec(`
     event TEXT NOT NULL,
     detail TEXT,
     time INTEGER NOT NULL
+  );
+
+  -- Escalating lockout for the DECOY admin page (/admin, trap.html).
+  -- Separate from "traps" above, which is the honeypot-credential lock
+  -- on the REAL login endpoint. strikes = attempts since the last ban.
+  -- ban_level = how many times this IP has been banned, ever (drives
+  -- the escalating duration). banned_until = 0 means not currently banned.
+  CREATE TABLE IF NOT EXISTS decoy_bans (
+    ip TEXT PRIMARY KEY,
+    strikes INTEGER DEFAULT 0,
+    ban_level INTEGER DEFAULT 0,
+    banned_until INTEGER DEFAULT 0,
+    last_attempt INTEGER DEFAULT 0
   );
 `);
 
@@ -279,9 +296,19 @@ app.get(['/admin.html', '/admin'], (req, res) => {
 //    as intruders (by IP, no fingerprint available yet) and bounce them
 //    to the same trap page instead of a normal 404.
 const SCANNER_BAIT_PATHS = [
-  '/.env', '/.env.local', '/.env.production', '/.git/config',
-  '/wp-login.php', '/wp-admin', '/phpmyadmin', '/xmlrpc.php',
-  '/config.php', '/.aws/credentials', '/server-status'
+  // Secrets / config files scanners grab first
+  '/.env', '/.env.local', '/.env.production', '/.env.backup',
+  '/.git/config', '/.git/HEAD', '/.aws/credentials', '/config.php',
+  '/config.json', '/.htaccess', '/web.config', '/composer.json',
+  '/.DS_Store', '/backup.sql', '/database.sql', '/dump.sql',
+  // Common CMS / framework admin guesses
+  '/wp-login.php', '/wp-admin', '/wp-admin.php', '/wp-config.php',
+  '/xmlrpc.php', '/phpmyadmin', '/pma', '/administrator',
+  '/administrator/index.php', '/user/login', '/admin.php',
+  '/admin/login', '/admin/login.php', '/login.php', '/cpanel',
+  '/webmail', '/manage', '/management', '/dashboard', '/panel',
+  '/control', '/console', '/server-status', '/actuator',
+  '/actuator/health', '/.well-known/security.txt'
 ];
 app.get(SCANNER_BAIT_PATHS, (req, res) => {
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
@@ -651,7 +678,85 @@ app.post('/api/intruder-event', (req, res) => {
   res.json({ ok: true });
 });
 
-// Get intruders list (auth required)
+// ============================================
+// DECOY ADMIN PAGE — ESCALATING LOCKOUT
+// First offense needs 5 failed attempts in a row to earn a ban.
+// After that, the IP is on notice: ANY single failed attempt once the
+// ban expires immediately re-bans it, at 10x the previous duration.
+// 1 day -> 10 days -> 100 days -> ... server-side, keyed by IP, so it
+// can't be reset by clearing browser storage.
+// ============================================
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const STRIKES_BEFORE_FIRST_BAN = 5;
+
+function getDecoyBanRow(ip) {
+  let row = db.prepare('SELECT * FROM decoy_bans WHERE ip = ?').get(ip);
+  if (!row) {
+    db.prepare(
+      'INSERT INTO decoy_bans (ip, strikes, ban_level, banned_until, last_attempt) VALUES (?, 0, 0, 0, 0)'
+    ).run(ip);
+    row = { ip, strikes: 0, ban_level: 0, banned_until: 0, last_attempt: 0 };
+  }
+  return row;
+}
+
+// Silent check on page load — if this IP is already banned, the client
+// shows the ban timer immediately instead of the fake login form.
+app.get('/api/decoy-status', (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const row = getDecoyBanRow(ip);
+  const now = Date.now();
+  if (row.banned_until > now) {
+    return res.json({ banned: true, remaining_ms: row.banned_until - now, ban_level: row.ban_level });
+  }
+  return res.json({ banned: false });
+});
+
+// Called on every submit of the decoy login form.
+app.post('/api/decoy-attempt', (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const row = getDecoyBanRow(ip);
+
+  // Already serving a ban — don't count this as a new strike, just
+  // tell the client how much longer they're locked out.
+  if (row.banned_until > now) {
+    return res.json({ banned: true, remaining_ms: row.banned_until - now, ban_level: row.ban_level });
+  }
+
+  let strikes = row.strikes + 1;
+  let banLevel = row.ban_level;
+  let bannedUntil = 0;
+  let justBanned = false;
+
+  if (row.ban_level === 0) {
+    // Never been banned before — give 5 strikes before the first ban.
+    if (strikes >= STRIKES_BEFORE_FIRST_BAN) {
+      banLevel = 1;
+      bannedUntil = now + ONE_DAY_MS; // 1 day
+      strikes = 0;
+      justBanned = true;
+    }
+  } else {
+    // Already been banned at least once, and that ban has expired —
+    // one more mistake re-bans immediately, 10x longer than last time.
+    banLevel = row.ban_level + 1;
+    bannedUntil = now + ONE_DAY_MS * Math.pow(10, banLevel - 1); // 10, 100, ... days
+    strikes = 0;
+    justBanned = true;
+  }
+
+  db.prepare(
+    'UPDATE decoy_bans SET strikes = ?, ban_level = ?, banned_until = ?, last_attempt = ? WHERE ip = ?'
+  ).run(strikes, banLevel, bannedUntil, now, ip);
+
+  if (justBanned) {
+    return res.json({ banned: true, remaining_ms: bannedUntil - now, ban_level: banLevel, just_banned: true });
+  }
+  return res.json({ banned: false, strikes });
+});
+
+
 app.get('/api/admin/intruders', requireAuth, (req, res) => {
   const rows = db.prepare(
     'SELECT * FROM intruders ORDER BY last_seen DESC'
