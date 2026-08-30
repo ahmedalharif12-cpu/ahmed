@@ -13,6 +13,26 @@ const Database = require('better-sqlite3');
 const app = express();
 app.disable('x-powered-by');
 
+// ===== Confuse tech-stack fingerprinting tools =====
+// A scanner (whatweb, wappalyzer, nmap -sV, etc.) that hits this site
+// more than once should get a DIFFERENT server signature each time —
+// that's far more useless to an attacker than consistently sending
+// nothing, because it actively contradicts whatever they concluded
+// from the last scan.
+const FAKE_SERVER_SIGNATURES = [
+  'Apache/2.4.58 (Ubuntu)',
+  'nginx/1.24.0',
+  'Microsoft-IIS/10.0',
+  'LiteSpeed',
+  'Apache/2.4.41 (Unix) OpenSSL/1.1.1k PHP/8.1.2',
+  'cloudflare'
+];
+app.use((req, res, next) => {
+  const pick = FAKE_SERVER_SIGNATURES[Math.floor(Math.random() * FAKE_SERVER_SIGNATURES.length)];
+  res.setHeader('Server', pick);
+  next();
+});
+
 // Do NOT blindly trust X-Forwarded-For — every rate limiter, the login
 // throttle, and the trap/lockout system all key off req.ip. If this were
 // set to `true` (or any hop count) with no real reverse proxy in front,
@@ -700,19 +720,9 @@ function getDecoyBanRow(ip) {
   return row;
 }
 
-// Silent check on page load — if this IP is already banned, the client
-// shows the ban timer immediately instead of the fake login form.
-app.get('/api/decoy-status', (req, res) => {
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  const row = getDecoyBanRow(ip);
-  const now = Date.now();
-  if (row.banned_until > now) {
-    return res.json({ banned: true, remaining_ms: row.banned_until - now, ban_level: row.ban_level });
-  }
-  return res.json({ banned: false });
-});
-
-// Called on every submit of the decoy login form.
+// Called on every submit of the decoy login form. The response is
+// intentionally never surfaced to the visitor — see trap.js. This just
+// keeps a silent server-side record for the admin dashboard.
 app.post('/api/decoy-attempt', (req, res) => {
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
   const now = Date.now();

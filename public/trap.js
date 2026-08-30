@@ -1,19 +1,20 @@
 /* ============================================
    DECOY LOGIN PAGE LOGIC
    Anyone who reaches /admin or /admin.html sees a page that looks
-   exactly like the real dashboard login. Nothing here gives it away
-   as fake. Whoever they are gets fingerprinted quietly in the
-   background as soon as the page loads — no visible reaction, no
-   taunt, nothing that would tip them off before they act.
+   exactly like the real dashboard login, and it BEHAVES like one too:
+   every single submit — whether it's a person typing once or a
+   brute-force tool hammering it thousands of times — gets back the
+   exact same plain "اسم المستخدم أو كلمة المرور غير صحيحة" message.
+   No mockery text, no countdown, no "you've been banned" reveal.
+   A scripted tool has nothing to detect here — it just looks like a
+   login that never succeeds, so it keeps wasting its own time instead
+   of flagging this as a honeypot and moving on.
 
-   Lockout is enforced server-side by IP (see /api/decoy-status and
-   /api/decoy-attempt in server.js), not by anything stored in this
-   browser, so it can't be reset by clearing cookies/localStorage:
-   - Attempts 1-4: a 35 second mockery message, then back to the
-     (still fake) login form.
-   - 5th attempt in a row: banned 1 day.
-   - Any single failed attempt after a ban expires: banned again,
-     10x longer than the last ban (10 days, then 100, ...).
+   Everything interesting still happens silently server-side: the
+   visitor is fingerprinted on load, every attempt is logged with
+   whatever they typed, and repeated attempts are still tracked and
+   throttled server-side (see /api/decoy-attempt in server.js) — that
+   data just never surfaces back to the browser.
    ============================================ */
 
 (function () {
@@ -46,179 +47,68 @@
     }
   });
 
-  // ===== Check ban status BEFORE showing the fake login form =====
-  // If this IP is already serving a ban, skip straight to the timer —
-  // showing the login form to someone already banned would be a tell.
-  fetch('/api/decoy-status')
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (data && data.banned) {
-        showBanScreen(data.remaining_ms, data.ban_level);
-      } else {
-        wireLoginForm();
-      }
-    })
-    .catch(function () {
-      // If the check itself fails, fall back to the normal form —
-      // fail open on UX, the server still enforces the real ban on submit.
-      wireLoginForm();
-    });
+  var usernameInput = document.getElementById('usernameInput');
+  var passwordInput = document.getElementById('passwordInput');
+  var unlockBtn = document.getElementById('unlockBtn');
+  var lockError = document.getElementById('lockError');
 
-  function wireLoginForm() {
-    var usernameInput = document.getElementById('usernameInput');
-    var passwordInput = document.getElementById('passwordInput');
-    var unlockBtn = document.getElementById('unlockBtn');
-    var lockError = document.getElementById('lockError');
+  if (!unlockBtn) return;
 
-    if (!unlockBtn) return;
+  function showError(text) {
+    lockError.textContent = text;
+    lockError.style.display = 'block';
+  }
 
-    function showError(text) {
-      lockError.textContent = text;
-      lockError.style.display = 'block';
+  unlockBtn.addEventListener('click', function () {
+    var username = (usernameInput.value || '').trim();
+    var password = passwordInput.value || '';
+
+    if (!username || !password) {
+      showError('أدخل اسم المستخدم وكلمة المرور');
+      return;
     }
 
-    unlockBtn.addEventListener('click', function () {
-      var username = (usernameInput.value || '').trim();
-      var password = passwordInput.value || '';
+    lockError.style.display = 'none';
+    unlockBtn.disabled = true;
+    var originalHTML = unlockBtn.innerHTML;
+    unlockBtn.innerHTML = '<span>جاري التحقق...</span>';
 
-      // Behave like the real form: empty fields just show a normal
-      // validation message, same as the real dashboard would. Doesn't
-      // count as an attempt server-side either.
-      if (!username || !password) {
-        showError('أدخل اسم المستخدم وكلمة المرور');
-        return;
-      }
+    var fp = (window.__getFingerprint) ? window.__getFingerprint() : ('fp_' + Date.now());
 
-      lockError.style.display = 'none';
-      unlockBtn.disabled = true;
-      var originalHTML = unlockBtn.innerHTML;
-      unlockBtn.innerHTML = '<span>جاري التحقق...</span>';
-
-      var fp = (window.__getFingerprint) ? window.__getFingerprint() : ('fp_' + Date.now());
-
-      // Log what they typed (for the admin dashboard) — separate from
-      // the ban-counting call below.
-      try {
-        fetch('/api/intruder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fingerprint: fp,
-            username: username,
-            reason: 'حاول تسجيل الدخول بصفحة الفخ (يوزر: ' + username + ')'
-          })
-        }).catch(function () {});
-      } catch (e) { /* silent */ }
-
-      if (window.__logIntruderEvent) {
-        window.__logIntruderEvent('محاولة دخول وهمية', 'يوزر: ' + username);
-      }
-
-      // The real strike/ban tracking — server-side, by IP.
-      fetch('/api/decoy-attempt', { method: 'POST' })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          // Small delay so it reads like a real login attempt, not an
-          // instant giveaway, then the reveal.
-          setTimeout(function () {
-            if (data && data.banned) {
-              showBanScreen(data.remaining_ms, data.ban_level);
-            } else {
-              showAttemptMockery();
-            }
-          }, 900);
+    // Log what they typed (for the real admin dashboard only — never
+    // shown back to this page).
+    try {
+      fetch('/api/intruder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fingerprint: fp,
+          username: username,
+          reason: 'حاول تسجيل الدخول بصفحة الفخ (يوزر: ' + username + ')'
         })
-        .catch(function () {
-          // If the ban-tracking call fails, still show the standard
-          // per-attempt taunt so nothing looks broken.
-          setTimeout(showAttemptMockery, 900);
-        });
-    });
+      }).catch(function () {});
+    } catch (e) { /* silent */ }
 
-    passwordInput && passwordInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') unlockBtn.click();
-    });
-  }
-
-  // ===== Formats a duration for display — seconds for the short taunt,
-  // "D يوم HH:MM:SS" for multi-day bans. =====
-  function formatDuration(ms) {
-    var totalSeconds = Math.max(0, Math.floor(ms / 1000));
-    var days = Math.floor(totalSeconds / 86400);
-    var hours = Math.floor((totalSeconds % 86400) / 3600);
-    var mins = Math.floor((totalSeconds % 3600) / 60);
-    var secs = totalSeconds % 60;
-    var pad = function (n) { return n.toString().padStart(2, '0'); };
-    if (days > 0) {
-      return days + ' يوم ' + pad(hours) + ':' + pad(mins) + ':' + pad(secs);
+    if (window.__logIntruderEvent) {
+      window.__logIntruderEvent('محاولة دخول وهمية', 'يوزر: ' + username);
     }
-    return pad(hours) + ':' + pad(mins) + ':' + pad(secs);
-  }
 
-  // ===== Per-attempt taunt (attempts 1-4): fixed 35 seconds, then
-  // reloads back to the (still fake) login form to bait another try. =====
-  function showAttemptMockery() {
-    document.body.innerHTML = '';
-    document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;';
+    // Still counted server-side (see /api/decoy-attempt) so the admin
+    // dashboard has the full picture — but the response is never used
+    // to change what this page shows. Fire and forget.
+    fetch('/api/decoy-attempt', { method: 'POST' }).catch(function () {});
 
-    var screen = document.createElement('div');
-    screen.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;gap:24px;';
-    document.body.appendChild(screen);
-
-    screen.innerHTML = '<div style="color:#ef4444;font-size:clamp(2.2rem,9vw,5rem);font-weight:900;text-shadow:0 0 60px rgba(239,68,68,0.6);">القم يا هطف</div>' +
-      '<div style="color:#f59e0b;font-size:1.1rem;font-weight:700;">حاول مره ثانيه، انا واثق فيك</div>' +
-      '<div id="attemptTimer" style="font-size:clamp(2rem,7vw,3.5rem);font-weight:900;font-family:monospace;color:#94a3b8;">00:35</div>';
-
-    var endTime = Date.now() + 35000;
-    var timerEl = document.getElementById('attemptTimer');
-    var interval = setInterval(function () {
-      var remaining = endTime - Date.now();
-      if (remaining <= 0) {
-        clearInterval(interval);
-        window.location.reload();
-        return;
-      }
-      timerEl.textContent = formatDuration(remaining);
-    }, 1000);
-  }
-
-  // ===== Full ban screen: shown either immediately on page load (if
-  // already banned) or right after the attempt that triggers a new ban. =====
-  function showBanScreen(remainingMs, banLevel) {
-    document.body.innerHTML = '';
-    document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;';
-
-    var screen = document.createElement('div');
-    screen.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;';
-    document.body.appendChild(screen);
-
+    // Small delay so it reads like a real auth check against a
+    // database, not an instant canned response.
     setTimeout(function () {
-      screen.innerHTML = '<div style="color:#ef4444;font-size:clamp(3rem,12vw,7rem);font-weight:900;text-shadow:0 0 60px rgba(239,68,68,0.6);">القم يا هطف</div>';
+      unlockBtn.innerHTML = originalHTML;
+      unlockBtn.disabled = false;
+      showError('اسم المستخدم أو كلمة المرور غير صحيحة');
+      passwordInput.value = '';
+    }, 700 + Math.floor(Math.random() * 400));
+  });
 
-      setTimeout(function () {
-        var endTime = Date.now() + remainingMs;
-        screen.innerHTML = '' +
-          '<div style="display:flex;flex-direction:column;align-items:center;gap:20px;">' +
-          '  <div style="color:#ef4444;font-size:1.1rem;font-weight:700;">⛔ تم حظرك بعد محاولات متكررة (مستوى الحظر: ' + banLevel + ')</div>' +
-          '  <div style="color:#94a3b8;font-size:0.9rem;">سيتم فتح الصفحة بعد انتهاء العداد — وأي محاولة فاشلة بعدها تضاعف مدة الحظر عشر مرات</div>' +
-          '  <div id="banTimer" style="font-size:clamp(2rem,8vw,4rem);font-weight:900;font-family:monospace;color:#f59e0b;text-shadow:0 0 40px rgba(245,158,11,0.4);">' + formatDuration(remainingMs) + '</div>' +
-          '  <div style="color:#475569;font-size:0.8rem;">لا تحاول تجاوز النظام</div>' +
-          '</div>';
-
-        var timerEl = document.getElementById('banTimer');
-        var interval = setInterval(function () {
-          var remaining = endTime - Date.now();
-          if (remaining <= 0) {
-            clearInterval(interval);
-            screen.innerHTML = '<div style="color:#22c55e;font-size:1.5rem;font-weight:700;">انتهى وقت الحظر</div>';
-            setTimeout(function () {
-              window.location.reload();
-            }, 2000);
-            return;
-          }
-          timerEl.textContent = formatDuration(remaining);
-        }, 1000);
-      }, 2000);
-    }, 2000);
-  }
+  passwordInput && passwordInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') unlockBtn.click();
+  });
 })();
