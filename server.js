@@ -938,11 +938,13 @@ app.use(express.static(PUBLIC_DIR, {
   index: ['index.html'],
   extensions: false,
   redirect: false,
-  maxAge: '1d',
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache');
-    }
+  setHeaders: (res) => {
+    // No caching at all for now — this project changes daily, and a
+    // cached old copy of trap.js/security.js has already caused real
+    // confusion (a fix looked "broken" because the browser was still
+    // running yesterday's script). Revisit this once the site is stable
+    // and not being actively iterated on.
+    res.setHeader('Cache-Control', 'no-cache');
   }
 }));
 
